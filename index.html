@@ -1,0 +1,767 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Banco de pruebas NDEF URL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E9EEF2; --panel:#F7F9FB; --ink:#16243A; --muted:#56677C; --line:#C9D3DD;
+  --signal:#2348C9; --signal-soft:#DCE4FB;
+  --ok:#1F7A4D; --ok-soft:#D6EFE2; --warn:#9A6200; --warn-soft:#F7E9C8; --bad:#B42F25; --bad-soft:#F6D9D6;
+  --seg-tlv:#8A6FD1; --seg-hdr:#2F8FB8; --seg-type:#3AA58A; --seg-pfx:#D18A2F; --seg-url:#2348C9;
+  --seg-term:#6B7785; --seg-free:#D3DBE4; --seg-over:#B42F25; --seg-cc:#C2559A;
+  --sans:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1622; --panel:#152132; --ink:#E3EAF2; --muted:#93A3B8; --line:#2A3A50;
+    --signal:#7D9BFF; --signal-soft:#1E2C52;
+    --ok:#5BCB8F; --ok-soft:#143426; --warn:#E3B04B; --warn-soft:#3A2E12; --bad:#FF7B6E; --bad-soft:#3D1A17;
+    --seg-url:#6E8DFF; --seg-free:#24344A; --seg-term:#8A96A5;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1622; --panel:#152132; --ink:#E3EAF2; --muted:#93A3B8; --line:#2A3A50;
+  --signal:#7D9BFF; --signal-soft:#1E2C52;
+  --ok:#5BCB8F; --ok-soft:#143426; --warn:#E3B04B; --warn-soft:#3A2E12; --bad:#FF7B6E; --bad-soft:#3D1A17;
+  --seg-url:#6E8DFF; --seg-free:#24344A; --seg-term:#8A96A5;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+.wrap{max-width:1120px;margin:0 auto;padding:20px 18px 64px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:18px}
+header.top h1{font-size:1.65rem;font-weight:600;margin:0;letter-spacing:-0.01em}
+header.top p{margin:4px 0 0;color:var(--muted);max-width:62ch}
+.env{font-size:.82rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border:1px solid var(--line);border-radius:999px;background:var(--panel);font-size:.8rem}
+.chip.ok{border-color:var(--ok);color:var(--ok)} .chip.bad{border-color:var(--bad);color:var(--bad)} .chip.warn{border-color:var(--warn);color:var(--warn)}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;border-bottom:1px solid var(--line);margin-bottom:20px}
+nav.tabs button{font:inherit;background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);padding:10px 14px;cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--signal);font-weight:600}
+nav.tabs button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+section.panel{display:none} section.panel.active{display:block}
+h2{font-size:1.2rem;margin:0 0 6px;font-weight:600}
+h3{font-size:1rem;margin:24px 0 8px;font-weight:600}
+p.lead{color:var(--muted);margin:0 0 16px;max-width:72ch}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px}
+label{display:block;font-weight:500;font-size:.9rem;margin-bottom:4px}
+.hint{font-size:.82rem;color:var(--muted);margin-top:4px}
+input[type=text],input[type=number],input[type=url],select,textarea{font:inherit;width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:8px 10px}
+textarea{font-family:var(--mono);font-size:.86rem;resize:vertical}
+textarea.url-hero{font-size:1rem;min-height:84px;border-width:2px;border-color:var(--signal);background:var(--panel)}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.row > *{flex:1 1 180px}
+.row > .shrink{flex:0 0 auto}
+button.btn{font:inherit;font-size:.9rem;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:4px;padding:7px 12px}
+button.btn:hover{border-color:var(--signal)}
+button.btn.primary{background:var(--signal);border-color:var(--signal);color:#fff}
+:root[data-theme="dark"] button.btn.primary{color:#0E1622}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) button.btn.primary{color:#0E1622}}
+button.btn.small{padding:3px 8px;font-size:.8rem}
+button.btn:disabled{opacity:.45;cursor:not-allowed}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:16px 0}
+.stat{background:var(--panel);padding:10px 12px}
+.stat .k{font-size:.78rem;color:var(--muted)}
+.stat .v{font-family:var(--mono);font-size:1.15rem;font-weight:500}
+.stat .s{font-size:.78rem;color:var(--muted)}
+.mapbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin:20px 0 8px}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:.8rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.memmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(11px,1fr));gap:2px;padding:10px;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.memmap span{aspect-ratio:1;border-radius:2px;background:var(--seg-free)}
+.memmap .over{background:var(--seg-over);opacity:.85}
+.memnote{font-size:.85rem;margin-top:6px;color:var(--muted)}
+.memnote b.bad{color:var(--bad)} .memnote b.ok{color:var(--ok)}
+.k-tlv{background:var(--seg-tlv)!important}.k-hdr{background:var(--seg-hdr)!important}.k-type{background:var(--seg-type)!important}
+.k-pfx{background:var(--seg-pfx)!important}.k-url{background:var(--seg-url)!important}.k-term{background:var(--seg-term)!important}.k-cc{background:var(--seg-cc)!important}
+.c-tlv{color:var(--seg-tlv)}.c-hdr{color:var(--seg-hdr)}.c-type{color:var(--seg-type)}.c-pfx{color:var(--seg-pfx)}.c-url{color:var(--seg-url)}.c-term{color:var(--seg-term)}.c-cc{color:var(--seg-cc)}
+.scroll{overflow-x:auto;max-width:100%}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:.8rem;background:var(--panel);position:sticky;top:0}
+td.num,th.num{text-align:right;font-family:var(--mono);white-space:nowrap}
+td.mono{font-family:var(--mono);font-size:.8rem;word-break:break-all}
+.tbl{border:1px solid var(--line);border-radius:6px;background:var(--panel);overflow:auto;max-height:560px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:.78rem;font-weight:600;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.neu{background:var(--signal-soft);color:var(--signal)}
+pre.hex{font-family:var(--mono);font-size:.8rem;line-height:1.55;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;margin:0}
+pre.hex .off{color:var(--muted)}
+details{margin-top:16px} summary{cursor:pointer;font-weight:600}
+.actions{display:flex;flex-wrap:wrap;gap:4px}
+.callout{border-left:3px solid var(--warn);background:var(--warn-soft);padding:10px 14px;border-radius:0 4px 4px 0;margin:12px 0;font-size:.9rem;max-width:80ch}
+.callout.info{border-color:var(--signal);background:var(--signal-soft)}
+.log{font-family:var(--mono);font-size:.8rem;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px;min-height:120px;max-height:320px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+.verdict{border-radius:8px;padding:22px;margin:12px 0;border:2px solid}
+.verdict.ok{border-color:var(--ok);background:var(--ok-soft)} .verdict.bad{border-color:var(--bad);background:var(--bad-soft)} .verdict.warn{border-color:var(--warn);background:var(--warn-soft)}
+.verdict .big{font-size:2rem;font-weight:600;line-height:1.1}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;font-size:.9rem;margin-top:12px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-family:var(--mono);word-break:break-all}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:760px){.grid2{grid-template-columns:1fr} header.top h1{font-size:1.35rem}}
+.prose{max-width:76ch} .prose p{margin:0 0 10px}
+dialog{border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);padding:18px;max-width:min(92vw,360px)}
+dialog::backdrop{background:rgba(10,20,35,.5)}
+#qrbox{background:#fff;padding:10px;display:flex;justify-content:center;margin:10px 0}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:6px;font-size:.88rem;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.show{opacity:1}
+@media (prefers-reduced-motion: reduce){#toast{transition:none}}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ===================== MODO RECEPTOR ===================== -->
+<section id="receiver" class="hidden" aria-live="polite">
+  <h1 style="font-size:1.4rem;margin:0">Resultado de la prueba NDEF</h1>
+  <p class="lead">Esta página se ha abierto desde una URL de prueba. Comprueba si el navegador ha recibido los datos completos e intactos.</p>
+  <div id="rxVerdict"></div>
+  <div class="row" style="margin-top:12px">
+    <button class="btn primary shrink" id="rxCopy">Copiar resultado (JSON)</button>
+    <button class="btn shrink" id="rxOpenApp">Abrir el banco de pruebas</button>
+  </div>
+  <p class="hint">El resultado se guarda en este navegador. Cópialo y pégalo en la pestaña «Resultados» del equipo donde consolidas las pruebas.</p>
+</section>
+
+<!-- ===================== APLICACIÓN ===================== -->
+<div id="app">
+<header class="top">
+  <div>
+    <h1>Banco de pruebas NDEF URL</h1>
+    <p>Calcula cuántos bytes ocupa una URL en un tag NFC, genera URLs de prueba con checksum y verifica qué recibe cada navegador al abrirlas.</p>
+  </div>
+  <div class="env" id="envChips"></div>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" data-tab="calc" aria-selected="true">Calculadora</button>
+  <button role="tab" data-tab="suite" aria-selected="false">Batería de pruebas</button>
+  <button role="tab" data-tab="browser" aria-selected="false">Este navegador</button>
+  <button role="tab" data-tab="nfc" aria-selected="false">Escribir tag (Web NFC)</button>
+  <button role="tab" data-tab="results" aria-selected="false">Resultados</button>
+  <button role="tab" data-tab="ref" aria-selected="false">Referencia</button>
+</nav>
+
+<!-- ---------- CALCULADORA ---------- -->
+<section class="panel active" id="tab-calc" role="tabpanel">
+  <label for="calcUrl">URL que se grabará en el registro NDEF</label>
+  <textarea id="calcUrl" class="url-hero" spellcheck="false">https://www.ejemplo.com/p?id=8f3a2c&amp;v=1</textarea>
+  <div class="row" style="margin-top:8px">
+    <div><label for="padTo">Ajustar a longitud total (caracteres)</label><input type="number" id="padTo" min="1" value="500"></div>
+    <button class="btn shrink" id="padBtn">Rellenar con parámetro de relleno</button>
+    <button class="btn shrink" id="calcToNfc">Usar en Web NFC</button>
+  </div>
+
+  <div class="stats" id="calcStats"></div>
+
+  <div class="mapbar">
+    <div style="flex:1 1 260px;max-width:420px">
+      <label for="mapTag">Mapa de memoria del tag</label>
+      <select id="mapTag"></select>
+    </div>
+    <div class="legend">
+      <span><i class="k-cc"></i>CC (Type 5)</span><span><i class="k-tlv"></i>TLV / NLEN</span><span><i class="k-hdr"></i>Cabecera registro</span>
+      <span><i class="k-type"></i>Tipo «U»</span><span><i class="k-pfx"></i>Código prefijo</span>
+      <span><i class="k-url"></i>URL</span><span><i class="k-term"></i>Terminador</span>
+      <span><i style="background:var(--seg-free)"></i>Libre</span><span><i style="background:var(--seg-over)"></i>Desborde</span>
+    </div>
+  </div>
+  <div class="memmap" id="memmap" aria-label="Mapa de memoria"></div>
+  <div class="memnote" id="memnote"></div>
+
+  <div class="row" style="margin-top:18px">
+    <div><label for="customType">Tag personalizado: tipo</label>
+      <select id="customType"><option value="T2">Type 2 (TLV)</option><option value="T4">Type 4 (fichero NDEF con NLEN)</option><option value="MFC">MIFARE Classic (TLV)</option><option value="T5">Type 5 / NFC-V (CC + TLV)</option></select></div>
+    <div><label for="customCap">Capacidad útil (bytes)</label><input type="number" id="customCap" value="2048" min="16"></div>
+  </div>
+
+  <h3>Capacidad por tipo de tag</h3>
+  <div class="tbl scroll"><table id="capTable"></table></div>
+  <p class="hint">«Máx. URL» asume caracteres ASCII y el mismo prefijo NDEF que la URL actual. Los caracteres no ASCII ocupan de 2 a 4 bytes en UTF-8.</p>
+
+  <details open>
+    <summary>Volcado hexadecimal (tal como queda en el tag)</summary>
+    <p class="hint" id="hexNote"></p>
+    <pre class="hex" id="hexdump"></pre>
+  </details>
+</section>
+
+<!-- ---------- BATERÍA ---------- -->
+<section class="panel" id="tab-suite" role="tabpanel">
+  <h2>Batería de pruebas</h2>
+  <p class="lead">Cada URL lleva su longitud esperada y un CRC32 de los datos. Al abrirla, esta misma página (alojada en tu dominio) actúa como receptor y dice si llegó completa.</p>
+  <div class="callout info" id="baseNotice"></div>
+  <div class="box">
+    <div class="row">
+      <div style="flex:2 1 320px"><label for="baseUrl">URL base del receptor</label><input type="url" id="baseUrl" spellcheck="false"></div>
+      <div><label for="where">Datos en</label>
+        <select id="where"><option value="query">Query (?…), llega al servidor</option><option value="hash">Fragmento (#…), no llega al servidor</option></select></div>
+      <div><label for="mode">Codificación de datos</label>
+        <select id="mode">
+          <option value="alnum">Alfanumérico [A-Za-z0-9]</option>
+          <option value="b64">Base64url [A-Za-z0-9-_]</option>
+          <option value="pct">UTF-8 codificado (%C3%B1…)</option>
+          <option value="raw">UTF-8 literal (ñ € 😀 sin codificar)</option>
+        </select></div>
+    </div>
+    <div style="margin-top:12px">
+      <label for="lengths">Longitudes totales de URL a generar (caracteres, separadas por comas)</label>
+      <input type="text" id="lengths" value="137, 254, 255, 256, 492, 868, 1024, 2083, 8192, 32768, 65536">
+      <div class="row" style="margin-top:8px">
+        <button class="btn shrink" data-preset="tags">Límites de cada tag</button>
+        <button class="btn shrink" data-preset="format">Fronteras de formato NDEF</button>
+        <button class="btn shrink" data-preset="browser">Límites de navegador</button>
+      </div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn primary shrink" id="genBtn">Generar batería</button>
+      <button class="btn shrink" id="copyAllBtn">Copiar lista de URLs</button>
+    </div>
+  </div>
+  <h3>URLs generadas</h3>
+  <div class="tbl scroll"><table id="suiteTable"><tr><td>Pulsa «Generar batería» para crear las URLs.</td></tr></table></div>
+  <p class="hint">La codificación «UTF-8 literal» guarda bytes no ASCII en el tag; el navegador los convierte a %XX al navegar, así que la URL recibida es más larga que la grabada. Sirve para medir ese efecto.</p>
+</section>
+
+<!-- ---------- ESTE NAVEGADOR ---------- -->
+<section class="panel" id="tab-browser" role="tabpanel">
+  <h2>Sondeo de longitud en este navegador</h2>
+  <p class="lead">Intenta fijar URLs cada vez más largas en el propio documento (solo cambia el fragmento #, sin recargar) y comprueba si el navegador las conserva íntegras. Es una estimación rápida; la prueba de referencia es abrir la URL desde el tag.</p>
+  <div class="row"><button class="btn primary shrink" id="probeBtn">Ejecutar sondeo</button></div>
+  <h3>Resultado</h3>
+  <div class="tbl scroll"><table id="probeTable"><tr><td>Sin ejecutar.</td></tr></table></div>
+  <h3>Entorno detectado</h3>
+  <dl class="kv" id="envKv"></dl>
+</section>
+
+<!-- ---------- WEB NFC ---------- -->
+<section class="panel" id="tab-nfc" role="tabpanel">
+  <h2>Escribir y leer tags con Web NFC</h2>
+  <p class="lead">Disponible en Chrome para Android, sobre HTTPS y en la pestaña principal (no dentro de un iframe). Chrome comprime el prefijo de la URL automáticamente.</p>
+  <div id="nfcStatus"></div>
+  <label for="nfcUrl">URL a escribir</label>
+  <textarea id="nfcUrl" rows="3" spellcheck="false"></textarea>
+  <div class="hint" id="nfcInfo"></div>
+  <div class="row" style="margin-top:10px">
+    <button class="btn primary shrink" id="nfcWrite">Escribir en tag</button>
+    <button class="btn shrink" id="nfcRead">Leer tag</button>
+    <button class="btn shrink" id="nfcStop">Cancelar</button>
+  </div>
+  <h3>Registro</h3>
+  <div class="log" id="nfcLog"></div>
+</section>
+
+<!-- ---------- RESULTADOS ---------- -->
+<section class="panel" id="tab-results" role="tabpanel">
+  <h2>Resultados recogidos</h2>
+  <p class="lead">Resultados guardados en este navegador por el receptor, más los que importes desde otros dispositivos.</p>
+  <div class="row">
+    <button class="btn shrink" id="resExportJson">Exportar JSON</button>
+    <button class="btn shrink" id="resExportCsv">Exportar CSV</button>
+    <button class="btn shrink" id="resClear">Borrar resultados</button>
+  </div>
+  <div class="tbl scroll" style="margin-top:12px"><table id="resTable"></table></div>
+  <h3>Importar o exportar</h3>
+  <textarea id="resIo" rows="6" placeholder="Pega aquí el JSON copiado desde el receptor de otro dispositivo"></textarea>
+  <div class="row" style="margin-top:8px"><button class="btn primary shrink" id="resImport">Importar</button><button class="btn shrink" id="resCopyIo">Copiar contenido</button></div>
+</section>
+
+<!-- ---------- REFERENCIA ---------- -->
+<section class="panel" id="tab-ref" role="tabpanel">
+  <h2>Referencia</h2>
+  <div class="callout">Las cifras de navegadores y servidores son orientativas y cambian entre versiones. Para eso existe este banco: confírmalas con tus dispositivos reales.</div>
+  <h3>Navegadores</h3>
+  <div class="tbl scroll"><table>
+    <tr><th>Navegador</th><th class="num">Límite aproximado</th><th>Notas</th></tr>
+    <tr><td>Chrome, Edge, Samsung Internet, Opera (Chromium)</td><td class="num">2 097 152</td><td>Límite interno de 2 MB por URL; la barra de direcciones muestra mucho menos.</td></tr>
+    <tr><td>Firefox</td><td class="num">≥ 65 536</td><td>La barra deja de mostrar a partir de ~64 K; la navegación admite más. Verificar.</td></tr>
+    <tr><td>Safari macOS / iOS (y todo navegador en iOS, que usa WebKit)</td><td class="num">≥ 80 000</td><td>Sin límite documentado; pruebas comunitarias muy por encima de 64 K. Verificar.</td></tr>
+    <tr><td>Internet Explorer 11 (legado)</td><td class="num">2 083</td><td>Origen de la «regla de los 2000 caracteres».</td></tr>
+    <tr><td>WebViews y navegadores in-app</td><td class="num">variable</td><td>Heredan el motor del sistema, pero la app puede reescribir o truncar la URL. Probar aparte.</td></tr>
+  </table></div>
+  <h3>Servidores y CDN (solo afectan a la parte antes del #)</h3>
+  <div class="tbl scroll"><table>
+    <tr><th>Componente</th><th class="num">Valor por defecto</th><th>Parámetro</th></tr>
+    <tr><td>Apache httpd</td><td class="num">8 190 B</td><td>LimitRequestLine</td></tr>
+    <tr><td>nginx</td><td class="num">8 KB</td><td>large_client_header_buffers</td></tr>
+    <tr><td>IIS</td><td class="num">4 096 / 2 048</td><td>maxUrl / maxQueryString</td></tr>
+    <tr><td>Amazon CloudFront</td><td class="num">8 192 B</td><td>Longitud de la URL de la petición</td></tr>
+    <tr><td>Cloudflare</td><td class="num">~16 KB</td><td>Longitud de URL. Verificar con tu plan.</td></tr>
+  </table></div>
+  <h3>Estructura del registro NDEF URI</h3>
+  <div class="prose">
+    <p>Registro bien conocido (TNF 0x01) de tipo «U». El primer byte del payload es un código que sustituye prefijos comunes: <code>0x04</code> equivale a <code>https://</code> y <code>0x02</code> a <code>https://www.</code>, lo que ahorra de 8 a 12 bytes.</p>
+    <p>Si el payload tiene 255 bytes o menos se usa registro corto (SR, longitud en 1 byte); a partir de 256 pasa a registro largo (4 bytes). Algunos lectores antiguos gestionan mal el registro largo: por eso la batería incluye la frontera 255/256.</p>
+    <p>En tags Type 2 y MIFARE Classic el mensaje va envuelto en un TLV 0x03 con longitud de 1 byte, o de 3 bytes (0xFF + 2) cuando el mensaje mide 255 o más; después va el terminador 0xFE si queda sitio. En Type 4 el fichero NDEF empieza con 2 bytes de longitud (NLEN).</p>
+    <p>En la práctica, el cuello de botella casi siempre es el tag: un NTAG216 admite unas 870 letras de URL con prefijo https://. Los límites de navegador solo entran en juego con tags Type 4 de fichero grande o Type 5 de gran memoria.</p>
+    <p>Type 5 (NFC-V, ISO 15693), como la familia ST25DV, empieza con un Capability Container: 4 bytes si la memoria es de hasta 2040 B, u 8 bytes con direccionamiento extendido (primer byte 0xE2) en el ST25DV16KC/64KC. Después va el mismo TLV 0x03 que en Type 2. En el ST25DV64KC el mensaje NDEF solo puede ocupar el Área 1; si particionas la memoria (ENDA1), usa el tag personalizado con el tamaño de esa área.</p>
+    <p>En iPhone, la lectura en segundo plano solo actúa si el primer registro del mensaje es una URL. Los MIFARE Classic no se leen en iPhone ni en Android sin chip NFC de NXP.</p>
+  </div>
+</section>
+</div>
+</div>
+
+<dialog id="qrDialog">
+  <h2 style="font-size:1rem">Abrir en el móvil</h2>
+  <p class="hint">Escanea con la cámara para probar el navegador del móvil sin grabar un tag.</p>
+  <div id="qrbox"></div>
+  <p class="hint" id="qrNote"></p>
+  <button class="btn" id="qrClose">Cerrar</button>
+</dialog>
+<div id="toast" role="status"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+"use strict";
+/* ============ Utilidades ============ */
+const $ = (s, r=document) => r.querySelector(s);
+const enc = new TextEncoder();
+const fmt = n => Number(n).toLocaleString('es-ES');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const short = (s, n=90) => s.length > n ? s.slice(0, n-30) + '…' + s.slice(-25) : s;
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'),1800); }
+async function copyText(text){
+  try { await navigator.clipboard.writeText(text); toast('Copiado'); return; } catch(e){}
+  const ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); toast('Copiado'); } catch(e){ toast('No se pudo copiar: selecciona el texto manualmente'); }
+  ta.remove();
+}
+const store = {
+  get(k, d){ try { const v=localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e){ return false; } }
+};
+
+/* ============ CRC32 y PRNG ============ */
+const CRC_TABLE = (() => { const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = c&1 ? 0xEDB88320^(c>>>1) : c>>>1; t[n]=c>>>0; } return t; })();
+function crc32(bytes){ let c=0xFFFFFFFF; for(let i=0;i<bytes.length;i++) c=CRC_TABLE[(c^bytes[i])&255]^(c>>>8); return ((c^0xFFFFFFFF)>>>0).toString(16).padStart(8,'0'); }
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function seedFrom(str){ let h=2166136261; for(const ch of str){ h^=ch.charCodeAt(0); h=Math.imul(h,16777619); } return h>>>0; }
+
+/* ============ Modelo NDEF ============ */
+const PREFIXES = ["", "http://www.", "https://www.", "http://", "https://", "tel:", "mailto:", "ftp://anonymous:anonymous@",
+  "ftp://ftp.", "ftps://", "sftp://", "smb://", "nfs://", "ftp://", "dav://", "news:", "telnet://", "imap:", "rtsp://",
+  "urn:", "pop:", "sip:", "sips:", "tftp:", "btspp://", "btl2cap://", "btgoep://", "tcpobex://", "irdaobex://", "file://",
+  "urn:epc:id:", "urn:epc:tag:", "urn:epc:pat:", "urn:epc:raw:", "urn:epc:", "urn:nfc:"];
+function bestPrefix(url){ let code=0, pre=""; PREFIXES.forEach((p,i)=>{ if(p && url.startsWith(p) && p.length>pre.length){ code=i; pre=p; } }); return {code, pre}; }
+
+const TAGS = [
+  {id:'ntag210', name:'NTAG210 / MIFARE Ultralight EV1', type:'T2', cap:48},
+  {id:'ntag212', name:'NTAG212', type:'T2', cap:128},
+  {id:'ntag213', name:'NTAG213', type:'T2', cap:144},
+  {id:'ulc',     name:'MIFARE Ultralight C', type:'T2', cap:144},
+  {id:'n424',    name:'NTAG 424 DNA (fichero NDEF 256 B)', type:'T4', cap:256},
+  {id:'ntag215', name:'NTAG215', type:'T2', cap:504},
+  {id:'mfc1k',   name:'MIFARE Classic 1K', type:'MFC', cap:716},
+  {id:'ntag216', name:'NTAG216', type:'T2', cap:888},
+  {id:'i2c2k',   name:'NTAG I²C plus 2k', type:'T2', cap:1912},
+  {id:'mfc4k',   name:'MIFARE Classic 4K', type:'MFC', cap:3356},
+  {id:'st25dv04kc', name:'ST25DV04KC', type:'T5', cap:512,  cc:[0xE1,0x40,0x40,0x00]},
+  {id:'st25dv16kc', name:'ST25DV16KC', type:'T5', cap:2048, cc:[0xE2,0x40,0x00,0x01,0x00,0x00,0x00,0xFF]},
+  {id:'st25dv64kc', name:'ST25DV64KC', type:'T5', cap:8192, cc:[0xE2,0x40,0x00,0x01,0x00,0x00,0x03,0xFF]},
+  {id:'desf4k',  name:'DESFire EV2/EV3 (fichero NDEF 4096 B, configurable)', type:'T4', cap:4096},
+];
+function t5cc(cap){ // CC típico NFC Forum Type 5: 4 B si memoria ≤ 2040 B, 8 B (direccionamiento extendido) si es mayor
+  if(cap<=2040) return [0xE1,0x40,Math.floor(cap/8)&255,0x00];
+  const m=Math.floor((cap-8)/8); return [0xE2,0x40,0x00,0x01,0x00,0x00,(m>>8)&255,m&255]; }
+function customTag(){ const type=$('#customType').value, cap=Math.max(16, parseInt($('#customCap').value)||2048);
+  return {id:'custom', name:'Personalizado', type, cap, cc: type==='T5' ? t5cc(cap) : undefined}; }
+function allTags(){ return [...TAGS, customTag()]; }
+
+/* Tamaños a partir de la longitud en bytes del resto de la URL (tras el prefijo) */
+function sizes(restLen){
+  const payload = 1 + restLen;
+  const sr = payload < 256;
+  const recHdr = 1 + 1 + (sr ? 1 : 4);       // cabecera + long. tipo + long. payload
+  const msg = recHdr + 1 + payload;          // + tipo 'U'
+  const tlvLen = msg < 255 ? 1 : 3;
+  return { payload, sr, recHdr, msg, tlvLen, t2: 1 + tlvLen + msg, t4: 2 + msg };
+}
+function need(tag, s){ return tag.type === 'T4' ? s.t4 : tag.type === 'T5' ? tag.cc.length + s.t2 : s.t2; }
+function maxRest(tag){ let lo=0, hi=tag.cap; if(need(tag,sizes(0))>tag.cap) return -1;
+  while(lo<hi){ const mid=(lo+hi+1)>>1; if(need(tag,sizes(mid))<=tag.cap) lo=mid; else hi=mid-1; } return lo; }
+function analyze(url){
+  const {code, pre} = bestPrefix(url);
+  const rest = url.slice(pre.length);
+  const restLen = enc.encode(rest).length;
+  return { url, code, pre, rest, restLen, chars:url.length, bytes:enc.encode(url).length, s:sizes(restLen) };
+}
+function smallestFit(a){ return TAGS.filter(t => need(t,a.s) <= t.cap).sort((x,y)=>x.cap-y.cap)[0] || null; }
+
+/* Construye los bytes reales (limitados) y los segmentos para colorear */
+function layout(a, tag, limit=4096){
+  const s=a.s, runs=[];
+  if(tag.type==='T5') runs.push(['cc', tag.cc]);
+  if(tag.type==='T4'){ runs.push(['tlv',[(s.msg>>8)&255, s.msg&255]]); }
+  else { runs.push(['tlv', s.tlvLen===1 ? [0x03, s.msg] : [0x03, 0xFF, (s.msg>>8)&255, s.msg&255]]); }
+  const pl=s.payload;
+  runs.push(['hdr', s.sr ? [0xD1, 0x01, pl] : [0xC1, 0x01, (pl>>>24)&255, (pl>>>16)&255, (pl>>>8)&255, pl&255]]);
+  runs.push(['type',[0x55]]); runs.push(['pfx',[a.code]]);
+  const restBytes = enc.encode(a.rest.length > limit ? a.rest.slice(0, limit) : a.rest);
+  runs.push(['url', restBytes, a.restLen]);
+  const total = need(tag,s);
+  const term = tag.type!=='T4' && total < tag.cap;
+  if(term) runs.push(['term',[0xFE]]);
+  return { runs, total: total + (term?1:0), term };
+}
+
+/* ============ Calculadora ============ */
+function fillTagSelect(){
+  const sel=$('#mapTag'), cur=sel.value || 'st25dv64kc';
+  sel.innerHTML = allTags().map(t=>`<option value="${t.id}">${esc(t.name)} · ${fmt(t.cap)} B</option>`).join('');
+  sel.value = cur;
+}
+function renderCalc(){
+  const url = $('#calcUrl').value.replace(/\n/g,'');
+  const a = analyze(url);
+  const saved = a.pre.length - 1;
+  $('#calcStats').innerHTML = [
+    ['Caracteres', fmt(a.chars), 'longitud JS de la URL'],
+    ['Bytes UTF-8', fmt(a.bytes), a.bytes>a.chars ? 'incluye caracteres multibyte' : 'todo ASCII'],
+    ['Prefijo NDEF', '0x'+a.code.toString(16).padStart(2,'0').toUpperCase(), a.pre ? `«${a.pre}», ahorra ${saved} B` : 'sin prefijo abreviado'],
+    ['Payload', fmt(a.s.payload)+' B', a.s.sr ? 'registro corto (SR)' : 'registro largo (4 B de longitud)'],
+    ['Mensaje NDEF', fmt(a.s.msg)+' B', 'cabecera + tipo + payload'],
+    ['En Type 2', fmt(a.s.t2)+' B', `TLV de ${a.s.tlvLen===1?'2':'4'} B + 1 B terminador si cabe`],
+    ['En Type 4', fmt(a.s.t4)+' B', 'NLEN de 2 B + mensaje'],
+  ].map(([k,v,s])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${esc(s)}</div></div>`).join('');
+
+  // Tabla de capacidad
+  let rows = `<tr><th>Tag</th><th>Tipo</th><th class="num">Capacidad</th><th class="num">Necesario</th><th class="num">Margen</th><th class="num">Máx. URL</th><th>Estado</th></tr>`;
+  for(const t of allTags()){
+    const n=need(t,a.s), m=t.cap-n, mr=maxRest(t);
+    const maxUrl = mr<0 ? '—' : fmt(a.pre.length + mr);
+    const st = m>=0 ? (m<8 ? '<span class="pill warn">Cabe justo</span>' : '<span class="pill ok">Cabe</span>') : '<span class="pill bad">No cabe</span>';
+    rows += `<tr><td>${esc(t.name)}</td><td>${t.type}</td><td class="num">${fmt(t.cap)}</td><td class="num">${fmt(n)}</td><td class="num">${m>=0?'+':''}${fmt(m)}</td><td class="num">${maxUrl}</td><td>${st}</td></tr>`;
+  }
+  $('#capTable').innerHTML = rows;
+
+  // Mapa de memoria
+  const tag = allTags().find(t=>t.id===$('#mapTag').value) || TAGS[7];
+  const L = layout(a, tag, 8192);
+  const cell = Math.max(1, Math.ceil(tag.cap/640));
+  const kindAt = []; // tipo por byte (resumido)
+  let pos=0; for(const [k,b,real] of L.runs){ const len = real ?? b.length; kindAt.push([pos, pos+len, k]); pos+=len; }
+  const kind = i => { for(const [s,e,k] of kindAt) if(i>=s && i<e) return k; return null; };
+  const cells = Math.ceil(tag.cap/cell);
+  let html=''; for(let c=0;c<cells;c++){ const k=kind(c*cell); html += k ? `<span class="k-${k}"></span>` : '<span></span>'; }
+  const over = L.total - tag.cap - (L.term?1:0);
+  if(over>0){ const oc=Math.min(320, Math.ceil(over/cell)); for(let i=0;i<oc;i++) html+='<span class="over"></span>'; }
+  $('#memmap').innerHTML = html;
+  const used = Math.min(L.total, tag.cap);
+  $('#memnote').innerHTML = (over>0
+    ? `<b class="bad">No cabe: sobran ${fmt(over)} B.</b> `
+    : `<b class="ok">Cabe.</b> Ocupa ${fmt(used)} de ${fmt(tag.cap)} B (${Math.round(used/tag.cap*100)} %). `)
+    + (cell>1 ? `Cada celda representa ${cell} B.` : 'Cada celda es 1 byte.');
+
+  // Hex dump
+  const flat=[]; for(const [k,b] of L.runs) for(const x of b) flat.push([x,k]);
+  const LIM=512; const show=flat.slice(0,LIM);
+  let out=''; for(let i=0;i<show.length;i+=16){
+    const line=show.slice(i,i+16);
+    out += `<span class="off">${i.toString(16).padStart(4,'0')}</span>  ` +
+      line.map(([x,k])=>`<span class="c-${k}">${x.toString(16).padStart(2,'0').toUpperCase()}</span>`).join(' ') +
+      '   '.repeat(16-line.length) + '  ' +
+      line.map(([x,k])=>`<span class="c-${k}">${x>=32&&x<127?esc(String.fromCharCode(x)):'.'}</span>`).join('') + '\n';
+  }
+  $('#hexdump').innerHTML = out;
+  $('#hexNote').textContent = `Formato ${tag.type==='T4'?'Type 4 (NLEN + mensaje)':tag.type==='T5'?'Type 5 (Capability Container + TLV); CC típico, verifícalo con tu configuración':'TLV Type 2 / MIFARE Classic'} para ${tag.name}.` + (L.total>LIM ? ` Se muestran los primeros ${LIM} de ${fmt(L.total)} bytes.` : '');
+}
+$('#calcUrl').addEventListener('input', renderCalc);
+$('#mapTag').addEventListener('change', renderCalc);
+['#customType','#customCap'].forEach(s=>$(s).addEventListener('input', ()=>{ fillTagSelect(); renderCalc(); }));
+$('#padBtn').addEventListener('click', ()=>{
+  const target=parseInt($('#padTo').value)||0; let u=$('#calcUrl').value.replace(/\n/g,'').replace(/[?&]x=a*$/,'');
+  const sep = u.includes('?') ? '&' : '?'; const fill = target - u.length - sep.length - 2;
+  if(fill<0){ toast('La URL ya supera esa longitud'); return; }
+  if(target>200000){ toast('Para más de 200 000 caracteres usa la batería'); return; }
+  $('#calcUrl').value = u + sep + 'x=' + 'a'.repeat(fill); renderCalc();
+});
+$('#calcToNfc').addEventListener('click', ()=>{ $('#nfcUrl').value=$('#calcUrl').value.replace(/\n/g,''); updateNfcInfo(); selectTab('nfc'); });
+
+/* ============ Batería ============ */
+const ALNUM='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+const B64=ALNUM+'-_';
+function genData(mode, len, rng){
+  const raw=[], dec=[]; let rem=len, i=0;
+  if(mode==='alnum'||mode==='b64'){ const cs=mode==='alnum'?ALNUM:B64; for(let k=0;k<len;k++) raw.push(cs[(rng()*cs.length)|0]); const s=raw.join(''); return {raw:s, decoded:s}; }
+  if(mode==='pct'){ const U=[['ñ','%C3%B1'],['€','%E2%82%AC'],['😀','%F0%9F%98%80'],['a','a']];
+    while(rem>=12){ const u=U[i++%4]; raw.push(u[1]); dec.push(u[0]); rem-=u[1].length; } }
+  if(mode==='raw'){ const U=['ñ','€','😀','a']; while(rem>=2){ const u=U[i++%4]; raw.push(u); dec.push(u); rem-=u.length; } }
+  while(rem-->0){ raw.push('a'); dec.push('a'); }
+  return {raw:raw.join(''), decoded:dec.join('')};
+}
+let suite=[];
+function makeTest(base, where, mode, L, id){
+  let b = base.split('#')[0];
+  const sep = where==='hash' ? '#' : (b.includes('?') ? (/[?&]$/.test(b)?'':'&') : '?');
+  const head = (l,c) => `${b}${sep}t=${id}&m=${mode}&n=${L}&l=${l}&c=${c}&d=`;
+  const dataChars = L - head('00000000','00000000').length;
+  if(dataChars < 1) return {id, L, mode, error:'La URL base es más larga que la longitud pedida'};
+  const {raw, decoded} = genData(mode, dataChars, mulberry32(seedFrom(id)));
+  const db = enc.encode(decoded);
+  const url = head(String(db.length).padStart(8,'0'), crc32(db)) + raw;
+  const a = analyze(url);
+  return {id, L, mode, url, a, fit:smallestFit(a), navLen: mode==='raw' ? encodeURI(url).length : url.length};
+}
+function defaultBase(){
+  const h = location.href.split('#')[0].split('?')[0];
+  return /^https?:/.test(h) && !/claude\.(ai|site)|claudeusercontent|anthropic/.test(location.hostname) ? h : 'https://tu-dominio.example/ndef-url-testbed.html';
+}
+function baseNotice(){
+  const ok = !/tu-dominio\.example/.test($('#baseUrl').value);
+  $('#baseNotice').innerHTML = ok
+    ? 'Las URLs apuntan a esta página. Al abrirlas desde un tag o un QR, mostrará el resultado de la prueba.'
+    : 'Para que el receptor funcione, aloja este mismo archivo HTML en un servidor HTTPS propio (GitHub Pages, Netlify, tu servidor) y pon aquí su dirección. Desde la vista previa de Claude las URLs no pueden llegar a esta página.';
+}
+function renderSuite(){
+  if(!suite.length){ $('#suiteTable').innerHTML='<tr><td>No hay URLs.</td></tr>'; return; }
+  const nfcOk = 'NDEFReader' in window;
+  let h = `<tr><th class="num">Long. URL</th><th class="num">Tras navegar</th><th class="num">Mensaje NDEF</th><th>Tag más pequeño en que cabe</th><th>URL</th><th>Acciones</th></tr>`;
+  suite.forEach((t,i)=>{
+    if(t.error){ h += `<tr><td class="num">${fmt(t.L)}</td><td colspan="5"><span class="pill bad">Error</span> ${esc(t.error)}</td></tr>`; return; }
+    h += `<tr><td class="num">${fmt(t.L)}</td><td class="num">${fmt(t.navLen)}</td><td class="num">${fmt(t.a.s.msg)} B</td>
+      <td>${t.fit ? esc(t.fit.name) : '<span class="pill neu">Ningún tag de la lista</span>'}</td>
+      <td class="mono">${esc(short(t.url))}</td>
+      <td><div class="actions">
+        <button class="btn small" data-act="copy" data-i="${i}">Copiar</button>
+        <button class="btn small" data-act="open" data-i="${i}">Abrir</button>
+        <button class="btn small" data-act="qr" data-i="${i}" ${t.L>1800?'disabled title="Demasiado larga para un QR"':''}>QR</button>
+        <button class="btn small" data-act="calc" data-i="${i}" ${t.L>200000?'disabled':''}>Analizar</button>
+        <button class="btn small" data-act="nfc" data-i="${i}" ${nfcOk?'':'disabled title="Web NFC no disponible aquí"'}>Grabar</button>
+      </div></td></tr>`;
+  });
+  $('#suiteTable').innerHTML = h;
+}
+$('#genBtn').addEventListener('click', async ()=>{
+  const base=$('#baseUrl').value.trim(), where=$('#where').value, mode=$('#mode').value;
+  const Ls=[...new Set($('#lengths').value.split(/[,\s;]+/).map(x=>parseInt(x)).filter(x=>x>0))].sort((a,b)=>a-b);
+  if(!base){ toast('Indica la URL base del receptor'); return; }
+  if(Ls.some(x=>x>8_000_000)){ toast('Máximo 8 000 000 caracteres por URL'); return; }
+  $('#genBtn').disabled=true; $('#genBtn').textContent='Generando…'; await sleep(20);
+  const run=Math.random().toString(36).slice(2,7);
+  suite = Ls.map((L,i)=>makeTest(base, where, mode, L, `${run}${i}`));
+  $('#genBtn').disabled=false; $('#genBtn').textContent='Generar batería';
+  store.set('ndef-testbed-base', base);
+  renderSuite();
+});
+$('#suiteTable').addEventListener('click', e=>{
+  const b=e.target.closest('button[data-act]'); if(!b) return; const t=suite[+b.dataset.i];
+  switch(b.dataset.act){
+    case 'copy': copyText(t.url); break;
+    case 'open': { const w=window.open(t.url,'_blank','noopener'); if(!w) toast('El navegador bloqueó la ventana nueva'); break; }
+    case 'qr': showQr(t.url); break;
+    case 'calc': $('#calcUrl').value=t.url; renderCalc(); selectTab('calc'); break;
+    case 'nfc': $('#nfcUrl').value=t.url; updateNfcInfo(); selectTab('nfc'); break;
+  }
+});
+$('#copyAllBtn').addEventListener('click', ()=>{
+  const ok=suite.filter(t=>t.url && t.L<=10000);
+  if(!ok.length){ toast('No hay URLs de hasta 10 000 caracteres'); return; }
+  copyText(ok.map(t=>t.url).join('\n'));
+});
+document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click', ()=>{
+  const base=$('#baseUrl').value.trim().split('#')[0]; const pre=bestPrefix(base).pre.length; let Ls=[];
+  if(b.dataset.preset==='tags') Ls=TAGS.map(t=>pre+maxRest(t)).filter(x=>x>base.length+40);
+  if(b.dataset.preset==='format') Ls=[pre+249, pre+250, pre+254, pre+255];   // TLV 1→3 bytes y SR→registro largo
+  if(b.dataset.preset==='browser') Ls=[2083, 8192, 16384, 32768, 65536, 131072, 1048576, 2097152, 2097153];
+  $('#lengths').value=[...new Set(Ls)].sort((a,b)=>a-b).join(', ');
+  if(b.dataset.preset==='tags') toast('Longitudes ajustadas a la URL base actual (ASCII)');
+}));
+$('#baseUrl').addEventListener('input', baseNotice);
+
+/* ============ QR ============ */
+function showQr(url){
+  const box=$('#qrbox'); box.innerHTML='';
+  if(typeof QRCode==='undefined'){ $('#qrNote').textContent='No se pudo cargar la librería de QR. Copia la URL y ábrela en el móvil.'; }
+  else { try { new QRCode(box,{text:url,width:240,height:240,correctLevel:QRCode.CorrectLevel.L}); $('#qrNote').textContent=`${fmt(url.length)} caracteres.`; }
+         catch(e){ $('#qrNote').textContent='La URL es demasiado larga para un QR.'; } }
+  $('#qrDialog').showModal();
+}
+$('#qrClose').addEventListener('click', ()=>$('#qrDialog').close());
+
+/* ============ Detección de entorno ============ */
+function browserName(ua){
+  if(/SamsungBrowser\/([\d.]+)/.test(ua)) return 'Samsung Internet '+RegExp.$1;
+  if(/EdgA?\/([\d.]+)/.test(ua)) return 'Edge '+RegExp.$1;
+  if(/OPR\/([\d.]+)/.test(ua)) return 'Opera '+RegExp.$1;
+  if(/FxiOS\/([\d.]+)/.test(ua)) return 'Firefox iOS '+RegExp.$1;
+  if(/Firefox\/([\d.]+)/.test(ua)) return 'Firefox '+RegExp.$1;
+  if(/CriOS\/([\d.]+)/.test(ua)) return 'Chrome iOS '+RegExp.$1;
+  if(/Chrome\/([\d.]+)/.test(ua)) return (/; wv\)/.test(ua)?'Android WebView ':'Chrome ')+RegExp.$1;
+  if(/Version\/([\d.]+).*Safari/.test(ua)) return 'Safari '+RegExp.$1;
+  return 'Desconocido';
+}
+function platformName(ua){
+  if(/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints>1)) return 'iOS / iPadOS';
+  if(/Android ([\d.]+)/.test(ua)) return 'Android '+RegExp.$1;
+  if(/Windows/.test(ua)) return 'Windows'; if(/Mac OS X/.test(ua)) return 'macOS'; if(/Linux/.test(ua)) return 'Linux';
+  return 'Desconocida';
+}
+function inFrame(){ try { return window.top !== window.self; } catch(e){ return true; } }
+function renderEnv(){
+  const ua=navigator.userAgent, nfc='NDEFReader' in window, frame=inFrame();
+  $('#envChips').innerHTML = `<span class="chip">${esc(browserName(ua))}</span><span class="chip">${esc(platformName(ua))}</span>` +
+    `<span class="chip ${nfc&&!frame?'ok':'warn'}">Web NFC ${nfc ? (frame?'bloqueado en iframe':'disponible') : 'no disponible'}</span>`;
+  $('#envKv').innerHTML = [['Navegador',browserName(ua)],['Plataforma',platformName(ua)],['User-Agent',ua],
+    ['Contexto seguro',window.isSecureContext?'sí':'no'],['Dentro de un iframe',frame?'sí':'no'],['Web NFC (NDEFReader)',nfc?'sí':'no'],
+    ['Longitud de la URL actual',fmt(location.href.length)]].map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('');
+}
+
+/* ============ Sondeo del navegador ============ */
+$('#probeBtn').addEventListener('click', async ()=>{
+  const btn=$('#probeBtn'); btn.disabled=true;
+  const orig=location.href, baseNoHash=orig.split('#')[0];
+  const steps=[2083, 8192, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 2097153, 4194304];
+  const rows=[]; let maxOk=0;
+  const draw=()=>{ $('#probeTable').innerHTML = `<tr><th class="num">Longitud pedida</th><th class="num">Longitud conservada</th><th>Resultado</th></tr>` +
+    rows.map(r=>`<tr><td class="num">${fmt(r.n)}</td><td class="num">${r.got==null?'—':fmt(r.got)}</td><td>${r.html}</td></tr>`).join('') +
+    `<tr><td colspan="3"><b>Máximo conservado íntegro: ${maxOk?fmt(maxOk):'ninguno'}</b></td></tr>`; };
+  for(const n of steps){
+    const pad=n-baseNoHash.length-7;
+    if(pad<0){ rows.push({n,got:null,html:'<span class="pill neu">Omitido</span>'}); continue; }
+    const target=baseNoHash+'#probe='+'a'.repeat(pad); let got=null, html;
+    try {
+      history.replaceState(history.state,'',target); got=location.href.length;
+      if(got===n){ html='<span class="pill ok">Íntegra</span>'; maxOk=n; }
+      else if(location.href===orig || got===orig.length) html='<span class="pill bad">Ignorada</span>';
+      else html='<span class="pill warn">Alterada o truncada</span>';
+    } catch(e){ html=`<span class="pill bad">Rechazada</span> <span class="hint">${esc(e.name)}</span>`; }
+    finally { try { history.replaceState(history.state,'',orig); } catch(e){} }
+    rows.push({n,got,html}); draw(); await sleep(40);
+  }
+  draw(); btn.disabled=false;
+});
+
+/* ============ Web NFC ============ */
+let nfcAbort=null;
+const nfcLog = m => { const l=$('#nfcLog'); l.textContent += `[${new Date().toLocaleTimeString('es-ES')}] ${m}\n`; l.scrollTop=l.scrollHeight; };
+function updateNfcInfo(){
+  const u=$('#nfcUrl').value.replace(/\n/g,''); if(!u){ $('#nfcInfo').textContent=''; return; }
+  const a=analyze(u), f=smallestFit(a);
+  $('#nfcInfo').textContent = `${fmt(a.chars)} caracteres, mensaje NDEF de ${fmt(a.s.msg)} B. ` + (f ? `Cabe desde ${f.name}.` : 'No cabe en ningún tag de la lista.');
+}
+function renderNfcStatus(){
+  const nfc='NDEFReader' in window, frame=inFrame();
+  let msg = !nfc ? 'Este navegador no expone Web NFC. Abre esta página en Chrome para Android, o graba las URLs con una app como NXP TagWriter o NFC Tools copiándolas desde la batería.'
+    : frame ? 'Web NFC existe pero no funciona dentro de un iframe. Abre el archivo alojado directamente en una pestaña.'
+    : !window.isSecureContext ? 'Web NFC requiere HTTPS.' : '';
+  $('#nfcStatus').innerHTML = msg ? `<div class="callout">${esc(msg)}</div>` : '';
+  ['#nfcWrite','#nfcRead'].forEach(s=>$(s).disabled = !nfc);
+}
+$('#nfcUrl').addEventListener('input', updateNfcInfo);
+$('#nfcWrite').addEventListener('click', async ()=>{
+  const url=$('#nfcUrl').value.replace(/\n/g,''); if(!url){ toast('Escribe una URL'); return; }
+  nfcAbort?.abort(); nfcAbort=new AbortController();
+  try { nfcLog(`Acerca el tag para escribir ${fmt(url.length)} caracteres…`);
+    await new NDEFReader().write({records:[{recordType:'url', data:url}]}, {signal:nfcAbort.signal});
+    nfcLog('Escritura correcta. Usa «Leer tag» para verificar.');
+  } catch(e){ nfcLog(`Error de escritura: ${e.name}: ${e.message}`); }
+});
+$('#nfcRead').addEventListener('click', async ()=>{
+  nfcAbort?.abort(); nfcAbort=new AbortController();
+  try { const r=new NDEFReader(); await r.scan({signal:nfcAbort.signal}); nfcLog('Escaneando: acerca un tag…');
+    r.onreadingerror = ()=>nfcLog('No se pudo leer el tag (formato no NDEF o lectura interrumpida).');
+    r.onreading = ev => {
+      nfcLog(`Tag ${ev.serialNumber||'(sin UID)'} con ${ev.message.records.length} registro(s).`);
+      ev.message.records.forEach((rec,i)=>{
+        const len=rec.data?rec.data.byteLength:0; let txt='';
+        if(rec.recordType==='url'||rec.recordType==='absolute-url'){ txt=new TextDecoder().decode(rec.data); }
+        nfcLog(`  #${i+1} tipo=${rec.recordType} payload=${fmt(len)} B` + (txt?` url=${fmt(txt.length)} car.`:''));
+        if(txt){ const ok=txt===$('#nfcUrl').value.replace(/\n/g,''); nfcLog(ok?'  Coincide con la URL del campo.':`  ${short(txt,120)}`); }
+      });
+    };
+  } catch(e){ nfcLog(`Error de lectura: ${e.name}: ${e.message}`); }
+});
+$('#nfcStop').addEventListener('click', ()=>{ nfcAbort?.abort(); nfcLog('Operación cancelada.'); });
+
+/* ============ Resultados ============ */
+const RES_KEY='ndef-testbed-results';
+const loadRes = () => store.get(RES_KEY, []);
+const saveRes = r => store.set(RES_KEY, r);
+const resKey = r => `${r.id}|${r.ua}|${r.time}`;
+const VERD = {ok:['ok','Íntegra'], trunc:['bad','Truncada'], alt:['warn','Alterada']};
+function renderRes(){
+  const r=loadRes().sort((a,b)=>(b.time||'').localeCompare(a.time||''));
+  if(!r.length){ $('#resTable').innerHTML='<tr><td>Aún no hay resultados. Abre URLs de la batería desde un tag o un QR, o importa resultados de otro dispositivo.</td></tr>'; return; }
+  $('#resTable').innerHTML = `<tr><th>Fecha</th><th>Navegador</th><th>Plataforma</th><th>Datos en</th><th>Codif.</th><th class="num">URL pedida</th><th class="num">href recibido</th><th class="num">Bytes datos</th><th>Resultado</th></tr>` +
+    r.map(x=>`<tr><td>${esc(new Date(x.time).toLocaleString('es-ES'))}</td><td>${esc(x.browser)}</td><td>${esc(x.platform)}</td><td>${esc(x.where)}</td><td>${esc(x.mode)}</td>
+      <td class="num">${fmt(x.n)}</td><td class="num">${fmt(x.hrefLen)}</td><td class="num">${fmt(x.gotBytes)} / ${fmt(x.expBytes)}</td>
+      <td><span class="pill ${(VERD[x.verdict]||['neu'])[0]}">${(VERD[x.verdict]||[0,x.verdict])[1]}</span></td></tr>`).join('');
+}
+function toCsv(r){ const cols=['time','id','browser','platform','where','mode','n','hrefLen','expBytes','gotBytes','crcExp','crcGot','verdict','ua'];
+  return [cols.join(','), ...r.map(x=>cols.map(c=>`"${String(x[c]??'').replace(/"/g,'""')}"`).join(','))].join('\n'); }
+$('#resExportJson').addEventListener('click', ()=>{ $('#resIo').value=JSON.stringify(loadRes(),null,1); copyText($('#resIo').value); });
+$('#resExportCsv').addEventListener('click', ()=>{ $('#resIo').value=toCsv(loadRes()); copyText($('#resIo').value); });
+$('#resCopyIo').addEventListener('click', ()=>copyText($('#resIo').value));
+$('#resClear').addEventListener('click', ()=>{ if(confirm('¿Borrar todos los resultados guardados en este navegador?')){ saveRes([]); renderRes(); } });
+$('#resImport').addEventListener('click', ()=>{
+  try { let d=JSON.parse($('#resIo').value); if(!Array.isArray(d)) d=[d];
+    const cur=loadRes(), keys=new Set(cur.map(resKey)); let added=0;
+    d.forEach(x=>{ if(x && x.id && !keys.has(resKey(x))){ cur.push(x); keys.add(resKey(x)); added++; } });
+    saveRes(cur); renderRes(); toast(`${added} resultado(s) importado(s)`);
+  } catch(e){ toast('El texto no es JSON válido'); }
+});
+
+/* ============ Receptor ============ */
+function runReceiver(){
+  const q=location.search.slice(1), h=location.hash.slice(1);
+  const raw = /(^|&)t=/.test(q) && q.includes('&d=') ? q : (/(^|&)t=/.test(h) ? h : (/(^|&)t=/.test(q) ? q : null));
+  if(!raw) return false;
+  const where = raw===q ? 'query' : 'hash';
+  const di = raw.indexOf('&d=');
+  const headStr = di>=0 ? raw.slice(0,di) : raw, d = di>=0 ? raw.slice(di+3) : '';
+  const p={}; headStr.split('&').forEach(kv=>{ const i=kv.indexOf('='); if(i>0) p[kv.slice(0,i)]=kv.slice(i+1); });
+  let decoded=null, decodeErr=false; try { decoded=decodeURIComponent(d); } catch(e){ decodeErr=true; decoded=d; }
+  const bytes=enc.encode(decoded); const crcGot=crc32(bytes);
+  const expBytes=parseInt(p.l,10)||0, n=parseInt(p.n,10)||0;
+  let verdict = di<0 || bytes.length<expBytes ? 'trunc' : (crcGot===p.c && bytes.length===expBytes && !decodeErr ? 'ok' : 'alt');
+  const ua=navigator.userAgent;
+  const res={ id:p.t||'?', mode:p.m||'?', where, n, hrefLen:location.href.length, expBytes, gotBytes:bytes.length,
+    crcExp:p.c||'', crcGot, verdict, browser:browserName(ua), platform:platformName(ua), ua, time:new Date().toISOString() };
+  const list=loadRes(); if(!list.some(x=>x.id===res.id && x.ua===res.ua)){ list.push(res); saveRes(list); }
+  const [cls,label]=VERD[verdict];
+  const expl = verdict==='ok' ? 'Los datos llegaron completos y el CRC32 coincide.'
+    : verdict==='trunc' ? `Faltan ${fmt(expBytes-bytes.length)} bytes de datos: la URL se cortó por el camino (tag, lector, sistema o navegador).`
+    : 'La longitud coincide pero el contenido cambió (normalización de caracteres o error de decodificación).';
+  $('#rxVerdict').innerHTML = `<div class="verdict ${cls}"><div class="big">${label}</div><p style="margin:6px 0 0">${expl}</p>
+    <dl class="kv">
+      <dt>Navegador</dt><dd>${esc(res.browser)} · ${esc(res.platform)}</dd>
+      <dt>Prueba</dt><dd>${esc(res.id)} · ${esc(res.mode)} · datos en ${where==='hash'?'fragmento':'query'}</dd>
+      <dt>Longitud URL grabada</dt><dd>${fmt(n)}</dd>
+      <dt>Longitud href recibido</dt><dd>${fmt(res.hrefLen)}${res.hrefLen!==n?' (el navegador puede normalizar o codificar caracteres)':''}</dd>
+      <dt>Bytes de datos</dt><dd>${fmt(bytes.length)} de ${fmt(expBytes)}</dd>
+      <dt>CRC32</dt><dd>${crcGot} (esperado ${esc(res.crcExp)})</dd>
+    </dl></div>`;
+  $('#rxCopy').onclick=()=>copyText(JSON.stringify(res));
+  $('#rxOpenApp').onclick=()=>{ $('#receiver').classList.add('hidden'); $('#app').classList.remove('hidden'); };
+  $('#receiver').classList.remove('hidden'); $('#app').classList.add('hidden');
+  return true;
+}
+
+/* ============ Pestañas e inicio ============ */
+function selectTab(name){
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.tab===name)));
+  document.querySelectorAll('section.panel').forEach(s=>s.classList.toggle('active', s.id==='tab-'+name));
+  if(name==='results') renderRes();
+  try { sessionStorage.setItem('ndef-tab', name); } catch(e){}
+}
+document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click', ()=>selectTab(b.dataset.tab)));
+
+$('#baseUrl').value = store.get('ndef-testbed-base', null) || defaultBase();
+if(/tu-dominio\.example/.test($('#baseUrl').value) && !/tu-dominio/.test(defaultBase())) $('#baseUrl').value=defaultBase();
+baseNotice(); fillTagSelect(); renderCalc(); renderEnv(); renderNfcStatus(); updateNfcInfo(); renderRes();
+try { const t=sessionStorage.getItem('ndef-tab'); if(t) selectTab(t); } catch(e){}
+runReceiver();
+</script>
+</body>
+</html>
